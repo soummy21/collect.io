@@ -17,7 +17,7 @@ MonoBehaviour:
     AppIdFusion: 
     AppIdChat: d14bf350-5fee-4cd5-9545-e061f6428438
     AppIdVoice: 
-    AppVersion: 0.1
+    AppVersion: 0.2
     UseNameServer: 1
     FixedRegion: 
     Server: 
@@ -50,6 +50,15 @@ MonoBehaviour:
   - SetTeamThatScored
   - CollectedArtifactOnClients
   - HitPickup
+  - UpdateCollectedArtifactOnNetwork
+  - UpdateScore
+  - UpdateAddedPlayerOnNetwork
+  - SendArenaPauseStateToNetwork
+  - UpdateArenaTimerUIOnNetwork
+  - SpawnPlayer
+  - ArenaSessionOverOnTheNetwork
+  - SendArenaTeamsListToNetwork
+  - LeaveRoomOnClient
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

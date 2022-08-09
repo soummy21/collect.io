@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using Photon.Pun;
 using TMPro;
-using Hashtable = ExitGames.Client.Photon.Hashtable;
 
 public class PlayerController : MonoBehaviour
 {
@@ -23,7 +22,6 @@ public class PlayerController : MonoBehaviour
 
         if (photonView.IsMine)
         {
-            FollowCam.instance.SetPlayerToFollow(transform);
             playerName.text = PhotonNetwork.NickName;
 
         }else
@@ -34,12 +32,16 @@ public class PlayerController : MonoBehaviour
     
     private void OnEnable()
     {
-        GameplayEvents.EndGameplay += StopInput;
+        GameMessages.OnPauseGame += StopInput;
+        GameMessages.OnPlayGame += StartInput;
+        GameMessages.OnGameSessionEnded += StopInput;
     }
 
     private void OnDisable()
     {
-        GameplayEvents.EndGameplay -= StopInput;
+        GameMessages.OnPauseGame -= StopInput;
+        GameMessages.OnPlayGame -= StartInput;
+        GameMessages.OnGameSessionEnded -= StopInput;
     }
 
     private void FixedUpdate()
@@ -57,8 +59,18 @@ public class PlayerController : MonoBehaviour
 
     private void StopInput()
     {
-        playerRigidbody.velocity = Vector2.zero;
-        enableControls = false;
+        if(photonView.IsMine)
+        {
+            playerRigidbody.velocity = Vector2.zero;
+            enableControls = false;
+        }
+
+    }
+
+    private void StartInput()
+    {   
+        if(photonView.IsMine) enableControls = true;
+
     }
 
     void FlipSprite()
@@ -100,12 +112,8 @@ public class PlayerController : MonoBehaviour
     {
         if (!photonView.IsMine) return;
 
-        if(collision.CompareTag(Identifiers.Pickup))
-        {
-            
-            int teamThatScored = (int) playerManager.myTeam;
-            PhotonNetwork.CurrentRoom.SetCustomProperties(new Hashtable() { { Identifiers.TeamThatScored, teamThatScored } , { Identifiers.PickupHit, true}  });
-        }
+        GameplayEvents.UpdateScoreboard?.Invoke(playerManager.myTeam);
+
     }
 
 

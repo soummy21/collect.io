@@ -1,0 +1,111 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7442786027987818370
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7442786027987818368}
+  - component: {fileID: 7442786027987818371}
+  m_Layer: 0
+  m_Name: Room Lobby Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7442786027987818368
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7442786027987818370}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7442786027987818371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7442786027987818370}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01b766b45f5ce104e9c7d9b199a2862b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Panel_Lobby: {fileID: 0}
+  Text_CurrentRoomName: {fileID: 0}
+  Panel_PlayerSideUI: {fileID: 0}
+  Button_Arena: {fileID: 0}
+  Popup_ArenaPlayers: {fileID: 0}
+  GO_ArenaPlayers:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  Text_ArenaPlayersTitle: {fileID: 0}
+  transitionTime: 5
+  Image_Tutorial: {fileID: 0}
+  Sprites_Tutorial:
+  - {fileID: 21300000, guid: c91546f716c3645b898d6e3b93bcdebf, type: 3}
+  - {fileID: 21300000, guid: 1d41821bef3e84af597185b6d07710aa, type: 3}
+  - {fileID: 21300000, guid: eecbfaebab4eb4d558301ed5e63d5755, type: 3}
+  - {fileID: 21300000, guid: 5acbbec193243484b90fe6917a830b55, type: 3}
+  - {fileID: 21300000, guid: 2847dc0f67feb49b4959b999a9ea4129, type: 3}
+  Buttons_Tutorial:
+  - {fileID: 0}
+  - {fileID: 0}
+  GO_TutorialPageNavig:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  Panel_ModeratorSideUI: {fileID: 0}
+  Popup_GameSettings: {fileID: 0}
+  Tabs_GameSettings:
+  - {fileID: 0}
+  - {fileID: 0}
+  Panels_GameSettins:
+  - {fileID: 0}
+  - {fileID: 0}
+  gameTimeSlider: {fileID: 0}
+  gameTimeText: {fileID: 0}
+  Text_PlayerListTitle: {fileID: 0}
+  GO_Players:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  NoPlayers: {fileID: 0}
+  Text_ArenaPlayerTexts:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  StartButton: {fileID: 0}

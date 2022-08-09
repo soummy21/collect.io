@@ -6,9 +6,15 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/_CollectHeads.io/Scenes/1_Launcher.unity
-    guid: 2cda990e2423bbf4892e6590ba056729
+    path: Assets/_TomoMultiplayer/Scenes/MainMenu.unity
+    guid: 3eaec629039d75649ac20e6e4671dddf
   - enabled: 1
-    path: Assets/_CollectHeads.io/Scenes/2_Game.unity
+    path: Assets/_TomoMultiplayer/Scenes/Lobby.unity
+    guid: c8b7cb4d3702ffa448ae5b00177baac3
+  - enabled: 1
+    path: Assets/_CollectHeads.io/Scenes/Game.unity
     guid: 8e370282afa12d541837a18fc53cd2c9
+  - enabled: 1
+    path: Assets/_TomoMultiplayer/Scenes/Empty.unity
+    guid: c56d983818f2ccd43bf590102241f54b
   m_configObjects: {}

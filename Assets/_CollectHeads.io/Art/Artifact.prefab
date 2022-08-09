@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 5331209903580318798}
   - component: {fileID: 5331209903580318799}
   - component: {fileID: 5331209903580318796}
-  - component: {fileID: 5331209903580318795}
   m_Layer: 0
   m_Name: Artifact
   m_TagString: Pickup
@@ -113,25 +112,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: afc9dc168eae83349a36c9232d188535, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &5331209903580318795
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5331209903580318784}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 3
-  OwnershipTransfer: 0
-  observableSearch: 2
-  ObservedComponents: []
-  sceneViewId: 0
-  InstantiationId: 0
-  isRuntimeInstantiated: 0
+  artifactID: 0

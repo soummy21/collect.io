@@ -4,93 +4,99 @@ using TMPro;
 
 public class GameMenuManager : MonoBehaviour
 {
+    public static GameMenuManager Instance;
 
-    [Header("Game Menu")]
-    [SerializeField] GameObject inGameMenu;
-    [SerializeField] GameObject endGameMenu;
-    [SerializeField] GameObject leaveButton;
-    [SerializeField] TextMeshProUGUI teamAScore;
-    [SerializeField] TextMeshProUGUI teamBScore;
-    [SerializeField] TextMeshProUGUI winnerTeam;
 
-    public int scoreA = 0;
-    public int scoreB = 0;
+    [Header("Per Arena Scoring UI")]
+    [SerializeField] TextMeshProUGUI[] teamAScores;
+    [SerializeField] TextMeshProUGUI[] teamBScores;
+
+    private int[] perArena_TeamA_Scores = new int[4];
+    private int[] perArena_TeamB_Scores = new int[4];
 
     private PhotonView photonView;
 
     private void Awake()
     {
+        if (Instance == null) Instance = this;
 
-        endGameMenu.SetActive(false);
-
-        teamAScore.text = "Team A\n0";
-        teamBScore.text = "Team B\n0";
 
         photonView = GetComponent<PhotonView>();
-        InvokeRoomUIEvent(false);
-        UpdateLeaveUI();
 
+        foreach (var teamAScore in teamAScores)
+        {
+            teamAScore.text = "Team A\n0";
+        }
+
+        foreach (var teamBScore in teamBScores)
+        {
+            teamBScore.text = "Team B\n0";
+        }
     }
+
 
     private void OnEnable()
     {       
-        ServerEvents.OnMasterClientChanged += UpdateLeaveUI;
-        GameplayEvents.UpdateScoreboard += UpdateScore;
+        GameplayEvents.UpdateScoreboard += UpdateScoreOnNetwork;
     }
 
     private void OnDisable()
     {
-        ServerEvents.OnMasterClientChanged -= UpdateLeaveUI;
-        GameplayEvents.UpdateScoreboard -= UpdateScore;
+        GameplayEvents.UpdateScoreboard -= UpdateScoreOnNetwork;
     }
 
-    private void UpdateLeaveUI()
+
+    private void UpdateScoreOnNetwork(Teams team)
     {
-        leaveButton.SetActive(PhotonNetwork.IsMasterClient);
+        int teamNo = (int)team;
+
+        object[] data = new object[] { teamNo, SessionData.arenaNo };
+        photonView.RPC(nameof(UpdateScore), RpcTarget.All, data);
     }
 
-    public void OnLeaveButtonClick()
-    {
-        photonView.RPC(nameof(InvokeRoomUIEvent), RpcTarget.AllBuffered, true);
-        PhotonNetwork.LoadLevel(0);
-        
-    }
 
     [PunRPC]
-    private void InvokeRoomUIEvent(bool status)
+    private void UpdateScore(object [] data)
     {
-        MainMenuEvents.RoomMenuStatus?.Invoke(status);
-    }
-
-    private void UpdateScore()
-    {
-        int team = (int)PhotonNetwork.CurrentRoom.CustomProperties[Identifiers.TeamThatScored];
+        int team = (int)data[0];
+        int arenaNo = (int)data[1];
 
         switch ((Teams)team)
         {
-            case Teams.A: scoreA++;
+            case Teams.A: perArena_TeamA_Scores[arenaNo - 1]++;
                 break;
-            case Teams.B: scoreB++;
+            case Teams.B: perArena_TeamB_Scores[arenaNo - 1]++;
                 break;
         }
 
-        teamAScore.text = "Team A\n" + scoreA.ToString();
-        teamBScore.text = "Team B\n" + scoreB.ToString();
-        PhotonNetwork.CurrentRoom.SetCustomProperties(new ExitGames.Client.Photon.Hashtable() { { Identifiers.PickupHit, false} });
+        teamAScores[arenaNo - 1].text = "Team A\n" + perArena_TeamA_Scores[arenaNo -1].ToString();
+        teamBScores[arenaNo - 1].text = "Team B\n" + perArena_TeamB_Scores[arenaNo - 1].ToString();
 
-        if (scoreA == 15 || scoreB == 15)
+        if (perArena_TeamA_Scores[arenaNo - 1] == 15 || perArena_TeamB_Scores[arenaNo - 1] == 15)
         {
-            GameplayEvents.EndGameplay?.Invoke();
+            UserMessages.UpdateLeaderBoard?.Invoke(arenaNo, team);
 
-            inGameMenu.SetActive(false);
-            winnerTeam.text = "Team "+ (Teams)team  + " Won!";
-            endGameMenu.SetActive(true);
-            
+            if (SessionData.arenaNo == arenaNo) GameMessages.OnGameSessionEnded?.Invoke();
+
+            if (SessionData.buildType == BuildType.Session_Moderator) GameMessages.OnCompleteArena?.Invoke(arenaNo);
+
         }
 
 
     }
 
+    public int GetTeamScore(int arenaNo, int team)
+    {
+        Teams teamName = (Teams)team;
+
+        switch (teamName)
+        {
+            case Teams.A: return perArena_TeamA_Scores[arenaNo - 1];
+            case Teams.B: return perArena_TeamB_Scores[arenaNo -1 ];
+            default: return -1;
+        }
+
+    }
 
 }
 

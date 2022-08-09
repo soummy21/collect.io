@@ -1,18 +1,21 @@
 ﻿using UnityEngine;
+using Photon.Pun;
+using Photon.Realtime;
 
 public class FollowCam : MonoBehaviour
 {
-    public static FollowCam instance;
 
     private Transform playerToFollow;
     private bool canFollow = false;
 
+    private PhotonView photonView;
+
     private void Awake()
     {
-        if (instance == null)
-            instance = this;
-        else
-            Destroy(this);
+        photonView = GetComponent<PhotonView>();
+
+        //Makes sure local camera renders for local player
+        if (photonView.IsMine) GetComponent<Camera>().depth = 10;
     }
 
     void LateUpdate()

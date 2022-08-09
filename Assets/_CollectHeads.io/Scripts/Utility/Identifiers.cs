@@ -5,6 +5,7 @@ public class Identifiers
     public const string PhotonPrefabPath = "PhotonPrefabs";
     public const string PlayerManager = "PlayerManager";
     public const string PlayerController = "PlayerController";
+    public const string PlayerCamera = "PlayerCamera";
     public const string MainMenu = "MainMenu";
 
     public const string Player = "Player";
