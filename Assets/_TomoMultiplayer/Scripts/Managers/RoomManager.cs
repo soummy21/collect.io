@@ -163,6 +163,7 @@ namespace TomoClub.Multiplayer
             if(defaultArenas - 1 < Mathf.CeilToInt((float)defaultTotalPlayers / perArenaPlayersRange.y))
             {
                 createErrorText.text = $"Max players per arena is {perArenaPlayersRange.y}";
+                return;
             }
 
             defaultArenas--;
@@ -180,7 +181,7 @@ namespace TomoClub.Multiplayer
                 return;
             }
 
-            if(defaultArenas + 1 * perArenaPlayersRange.x > defaultTotalPlayers)
+            if( (defaultArenas + 1) * perArenaPlayersRange.x > defaultTotalPlayers)
             {
                 createErrorText.text = $"Minimum {perArenaPlayersRange.x} players are required per room";
                 //Error Sound
@@ -212,7 +213,8 @@ namespace TomoClub.Multiplayer
 
             //Add the essential room properties {no. of arenas }
             Hashtable roomProperties = new Hashtable();
-            roomProperties.Add(Identifiers_Mul.PlayerSettings.NoOfArenas, defaultArenas);
+            roomProperties.Add(Identifiers_Mul.PlayerSettings.AvailableArenas, defaultArenas);
+            roomProperties.Add(Identifiers_Mul.PlayerSettings.OccupiedArenas, defaultArenas);
             roomOptions.CustomRoomProperties = roomProperties;
 
             //Create a room of random name

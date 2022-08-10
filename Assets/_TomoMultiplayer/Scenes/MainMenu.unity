@@ -1350,6 +1350,30 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2667925317118586982, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}
+      propertyPath: m_text
+      value: Logger
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667925317118586982, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}
+      propertyPath: m_fontSize
+      value: 45
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667925317118586982, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}
+      propertyPath: m_fontSizeMax
+      value: 45
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667925317118586982, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}
+      propertyPath: m_fontSizeMin
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667925317118586982, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}
+      propertyPath: m_lineSpacing
+      value: -17.81
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667925317118586982, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}
+      propertyPath: m_enableAutoSizing
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2667925317427711412, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}
       propertyPath: m_IsActive
       value: 1

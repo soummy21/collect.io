@@ -1,5 +1,6 @@
 using Photon.Realtime;
 using UnityEngine;
+using System.Collections.Generic;
 
 public static class SessionData
 {
@@ -14,6 +15,11 @@ public static class SessionData
     public static GameStates previousGameState = GameStates.MainMenu;
     public static GameStates currentGameState = GameStates.MainMenu;
 
+    //Room Players Info
+    public static List<Player> cachedRoomPlayers = new List<Player>();
+    public static List<int> cachedPlayersArenaNo = new List<int>();
+    public static int[] playersPerArena = new int[4];
+
     //Player Details
     public static string playerName
     {
@@ -21,8 +27,7 @@ public static class SessionData
         //get => PlayerPrefs.GetString(Identifiers.GameSettings.PlayerName);
         //set => PlayerPrefs.SetString(Identifiers.GameSettings.PlayerName, value);
     }
-    public static int arenaNo = -1;
-
+    public static int localArenaNo = -1;
     public static int sessionGameTime
     {
         get => PlayerPrefs.GetInt(Identifiers_Mul.PlayerSettings.GameTime, 600);
@@ -52,5 +57,25 @@ public static class SessionData
         }
     }
 
-    
+    public static void ResetPlayersPerArena()
+    {
+        for (int i = 0; i < playersPerArena.Length; i++)
+        {
+            playersPerArena[i] = 0;
+        }
+    }
+
+    //Gives a valid random arena
+    public static int GiveRandomArenaNo(int[] remainingSpots, int requiredArenas)
+    {
+        int randArenaNo = Random.Range(1, requiredArenas + 1);
+        if (remainingSpots[randArenaNo - 1] == 0)
+        {
+            return GiveRandomArenaNo(remainingSpots, requiredArenas);
+        }
+        remainingSpots[randArenaNo - 1]--;
+        return randArenaNo;
+    }
+
+
 }

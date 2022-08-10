@@ -74,7 +74,7 @@ namespace TomoClub.Multiplayer
         public override void OnConnectedToMaster()
         {
             PersistantUI.Instance.LogOnScreen("Connected To Game!");
-            if(!PhotonNetwork.InLobby) Invoke(nameof(JoinCustomLobby), 1f);
+            if(!PhotonNetwork.InLobby) Invoke(nameof(JoinCustomLobby), 0.3f);
         }
 
         //Join a custom defined lobby instead of default lobby
@@ -141,12 +141,32 @@ namespace TomoClub.Multiplayer
 
         public override void OnPlayerEnteredRoom(Player newPlayer)
         {
-            ServerMesseges.OnRoomPlayersStatusChange?.Invoke(newPlayer, true);//Player Entered
+            if (SessionData.buildType == BuildType.Session_Moderator)
+            {
+                //Keep track of room players anywhere                      
+                int playerArenaNo = newPlayer.CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] == null ? -1 :
+                    (int)newPlayer.CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo];
+                SessionData.cachedRoomPlayers.Add(newPlayer);
+                SessionData.cachedPlayersArenaNo.Add(playerArenaNo);
+            }
+
+            ServerMesseges.OnPlayerJoinedRoom?.Invoke(newPlayer);//Player Entered
         }
 
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
-            ServerMesseges.OnRoomPlayersStatusChange?.Invoke(otherPlayer, false);//Player Left
+
+            if (SessionData.buildType == BuildType.Session_Moderator)
+            {
+                //Keep track of room players anywhere
+                int index = SessionData.cachedRoomPlayers.IndexOf(otherPlayer);
+                SessionData.cachedRoomPlayers.Remove(otherPlayer);
+                SessionData.cachedPlayersArenaNo.RemoveAt(index);
+            }
+
+            ServerMesseges.OnPlayerLeftRoom?.Invoke(otherPlayer);//Player Left
+
+
         }
 
         public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
@@ -166,5 +186,4 @@ namespace TomoClub.Multiplayer
 
     }
 }
-
 

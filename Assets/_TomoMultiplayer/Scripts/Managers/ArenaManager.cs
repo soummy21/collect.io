@@ -3,11 +3,12 @@ using UnityEngine;
 using UnityEngine.UI;
 using Photon.Pun;
 using Photon.Realtime;
-using System.Collections.Generic;
-using System;
+using System.Collections;
 
 public class ArenaManager : MonoBehaviour
 {
+    public static ArenaManager Instance;
+
     [Header("Arena In-Game")]
     [Tooltip("Add reference to the 4 cameras within your scene")]
     [SerializeField] Camera[] Cameras_Arena;
@@ -16,6 +17,10 @@ public class ArenaManager : MonoBehaviour
     [Tooltip("Assign reference to the 4 arena timer text elements")]
     [SerializeField] TextMeshProUGUI[] Texts_ArenaTimer;
     [SerializeField] GameObject Panel_Pause;
+
+    [Header("Player Arena UI")]
+    [SerializeField] GameObject Panel_Spectator;
+    [SerializeField] TextMeshProUGUI Text_SpectatingArenaNo;
 
     [Header("Moderator Arena UI")]
     [SerializeField] GameObject Panel_Moderator;
@@ -49,10 +54,15 @@ public class ArenaManager : MonoBehaviour
     private bool[] currentArenaPauseStatus = new bool[maxArenas];
     //bools to check if arena session are over
     private bool[] arenaSessionOver;
+    //bool to check if currently assigningTeams
+    private bool canAssignRandomTeams = true;
+
 
     private void Awake()
     {
         photonView = GetComponent<PhotonView>();
+
+        if (Instance == null) Instance = this;  
 
         Arena_Init();
         ArenaUI_Init();
@@ -65,7 +75,6 @@ public class ArenaManager : MonoBehaviour
     {
         ServerMesseges.OnLeaveRoom += GoToMainMenu;
 
-        GameMessages.OnGameSessionEnded += TurnOnEndPanel;
         GameMessages.OnCompleteArena += UpdateArenaUIOnModerator;
         UserMessages.UpdateLeaderBoard += UpdateAreanRankings;
 
@@ -82,7 +91,6 @@ public class ArenaManager : MonoBehaviour
     {
         ServerMesseges.OnLeaveRoom -= GoToMainMenu;
 
-        GameMessages.OnGameSessionEnded -= TurnOnEndPanel;
         GameMessages.OnCompleteArena -= UpdateArenaUIOnModerator;
         UserMessages.UpdateLeaderBoard -= UpdateAreanRankings;
 
@@ -155,7 +163,7 @@ public class ArenaManager : MonoBehaviour
     private void Arena_Init()
     {
         //Init Arenas 
-        currentlyOccupiedArenas = (int)PhotonNetwork.CurrentRoom.CustomProperties[Identifiers_Mul.PlayerSettings.NoOfArenas];
+        currentlyOccupiedArenas = (int)PhotonNetwork.CurrentRoom.CustomProperties[Identifiers_Mul.PlayerSettings.OccupiedArenas];
 
         arenaSessionOver = new bool[currentlyOccupiedArenas];
 
@@ -210,9 +218,53 @@ public class ArenaManager : MonoBehaviour
                 // Render based on local players arenaNo
                 //Cameras_Arena[SessionData.arenaNo - 1].depth = 1;
                 foreach (var camera in Cameras_Arena) camera.gameObject.SetActive(false);
-                Panels_Arena[SessionData.arenaNo - 1].SetActive(true);
+                Panels_Arena[SessionData.localArenaNo - 1].SetActive(true);
                 break;
         }
+    }
+
+    public void PlayerBecomesSpectator()
+    {
+        //Turn on spectator cameras
+        foreach (var camera in Cameras_Arena) camera.gameObject.SetActive(true);
+
+        Panel_Spectator.SetActive(true);
+        Panels_Arena[SessionData.localArenaNo - 1].SetActive(false);
+
+        currentSelectedArena = SessionData.localArenaNo + 1 > currentlyOccupiedArenas ? 1 : SessionData.localArenaNo + 1;
+
+        Cameras_Arena[currentSelectedArena- 1].depth = 3;
+        moderatorCameraFollows[currentSelectedArena - 1].UpdateCameraFollow(true);
+        Panels_Arena[currentSelectedArena - 1].SetActive(true);
+        Text_SpectatingArenaNo.text = $"Spectating: Arena {currentSelectedArena}";
+    }
+
+    public void NextArena()
+    {
+        Cameras_Arena[currentSelectedArena - 1].depth = -1;
+        moderatorCameraFollows[currentSelectedArena - 1].UpdateCameraFollow(false);
+        Panels_Arena[currentSelectedArena - 1].SetActive(false);
+
+        currentSelectedArena = currentSelectedArena + 1 > currentlyOccupiedArenas ? 1 : currentSelectedArena + 1;
+
+        Cameras_Arena[currentSelectedArena - 1].depth = 3;
+        moderatorCameraFollows[currentSelectedArena - 1].UpdateCameraFollow(true);
+        Panels_Arena[currentSelectedArena - 1].SetActive(true);
+        Text_SpectatingArenaNo.text = $"Arena {currentSelectedArena}";
+    }
+
+    public void PreviousArena()
+    {
+        Cameras_Arena[currentSelectedArena - 1].depth = -1;
+        moderatorCameraFollows[currentSelectedArena - 1].UpdateCameraFollow(false);
+        Panels_Arena[currentSelectedArena - 1].SetActive(false);
+
+        currentSelectedArena = currentSelectedArena - 1 < 1 ? currentlyOccupiedArenas : currentSelectedArena - 1;
+
+        Cameras_Arena[currentSelectedArena - 1].depth = 3;
+        moderatorCameraFollows[currentSelectedArena - 1].UpdateCameraFollow(true);
+        Panels_Arena[currentSelectedArena - 1].SetActive(true);
+        Text_SpectatingArenaNo.text = $"Arena {currentSelectedArena}";
     }
 
     private void UpdateArenaTimerUI(int time, int arenaNo)
@@ -227,12 +279,9 @@ public class ArenaManager : MonoBehaviour
         int time = (int) data[0];
         int arenaNo = (int)data[1];
 
-        if(SessionData.arenaNo == 0 || SessionData.arenaNo == arenaNo)
-        {
-            currentArenaTimes[arenaNo - 1] = time;
-            string timeInMins = Utilities.CovertTimeToString(time);
-            Texts_ArenaTimer[arenaNo - 1].text = timeInMins;
-        }
+        currentArenaTimes[arenaNo - 1] = time;
+        string timeInMins = Utilities.CovertTimeToString(time);
+        Texts_ArenaTimer[arenaNo - 1].text = timeInMins;
 
     }
 
@@ -316,7 +365,7 @@ public class ArenaManager : MonoBehaviour
     {
         currentArenaPauseStatus[arenaNo - 1] = pauseState;
 
-        if(arenaNo == SessionData.arenaNo)
+        if(arenaNo == SessionData.localArenaNo)
         {
             if(pauseState)
             {
@@ -345,11 +394,59 @@ public class ArenaManager : MonoBehaviour
 
     public void RandomTeams()
     {
+        if(!canAssignRandomTeams)
+        {
+            PersistantUI.Instance.LogOnScreen("Assignment in Progress");
+            return;
+        }
 
+        canAssignRandomTeams = false;
+        StartCoroutine(RandomizeArenas());
+
+    }
+
+    private IEnumerator RandomizeArenas()
+    {
+        int[] remainingSpots = new int[currentlyOccupiedArenas];
+
+        for (int i = 0; i < remainingSpots.Length; i++)
+        {
+            remainingSpots[i] = SessionData.playersPerArena[i];
+        }
+
+        SessionData.ResetPlayersPerArena();
+        ExitGames.Client.Photon.Hashtable playerProperties = SessionData.cachedRoomPlayers[0].CustomProperties;
+
+        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
+        {
+            int currentArenaNo = SessionData.GiveRandomArenaNo(remainingSpots, currentlyOccupiedArenas);
+
+            //Set Arena for player         
+            playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = currentArenaNo;
+            SessionData.cachedRoomPlayers[i].SetCustomProperties(playerProperties);
+            SessionData.cachedPlayersArenaNo[i] = currentArenaNo;
+            SessionData.playersPerArena[currentArenaNo - 1]++;
+            yield return new WaitForSeconds(0.03f);
+
+        }
+
+        canAssignRandomTeams = true;
+        yield return new WaitForSeconds(1.5f);
+        ReloadLevel();
     }
 
     public void CloseRoom()
     {
+        //Reset arenaNos on the network
+        ExitGames.Client.Photon.Hashtable playerProperties = SessionData.cachedRoomPlayers[0].CustomProperties;
+        
+        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
+        {
+            playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = -1;
+            SessionData.cachedRoomPlayers[i].SetCustomProperties(playerProperties);
+        }
+        
+
         photonView.RPC(nameof(LeaveRoomOnClient), RpcTarget.All);
     }
 
@@ -374,7 +471,11 @@ public class ArenaManager : MonoBehaviour
     {
         CalculateWinnerOnTimerEnd(arenaNo);
 
-        if (arenaNo == SessionData.arenaNo) GameMessages.OnGameSessionEnded?.Invoke();
+        if (arenaNo == SessionData.localArenaNo)
+        {
+            GameMessages.OnGameSessionEnded?.Invoke();
+            PlayerBecomesSpectator();
+        }
 
         if (SessionData.buildType == BuildType.Session_Moderator) UpdateArenaUIOnModerator(arenaNo);
     }
@@ -390,9 +491,12 @@ public class ArenaManager : MonoBehaviour
 
     }
 
+    [PunRPC]
     private void TurnOnEndPanel()
     {
-        Panels_Arena[SessionData.arenaNo - 1].SetActive(false);
+        Panels_Arena[currentSelectedArena - 1].SetActive(false);
+        Panel_Spectator.SetActive(false);
+        Panel_Moderator.SetActive(false);
         Popup_EndPanel.SetActive(true);
     }
 
@@ -426,7 +530,12 @@ public class ArenaManager : MonoBehaviour
         Player[] players = PhotonNetwork.PlayerList;
         for (int i = 0; i < players.Length; i++)
         {
-            if((int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] == arenaNo 
+            if ((int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] == 0) continue;
+
+            Debug.Log($"Player:{players[i].NickName}, Arena: {(int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo]},Team:{ (int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.TeamNo]}");
+
+
+            if ((int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] == arenaNo 
                 && (int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.TeamNo] == team)
             {
                 winnerPlayerList += string.IsNullOrEmpty(winnerPlayerList) ? players[i].NickName : $", {players[i].NickName}";
@@ -444,21 +553,24 @@ public class ArenaManager : MonoBehaviour
         playPauseButtons[arenaNo-1].SetActive(false);
         if (currentSelectedArena == arenaNo) Text_Spectating.text = "Session Finished!";
 
-        bool allArenasFinished = true;
+        //Turn on leaderboard when everyone finished theri
+        if (AllArenasFinished())
+        {
+            photonView.RPC(nameof(TurnOnEndPanel), RpcTarget.All);
+        }
+    }
+
+    private bool AllArenasFinished()
+    {
         for (int i = 0; i < currentlyOccupiedArenas; i++)
         {
             if (!arenaSessionOver[i])
             {
-                allArenasFinished = false;
-                break;
+                return false;
             }
         }
 
-        if (allArenasFinished)
-        {
-            Panels_Arena[currentSelectedArena - 1].SetActive(false);
-            Popup_EndPanel.SetActive(true);
-        }
+        return true;
     }
 
     #endregion

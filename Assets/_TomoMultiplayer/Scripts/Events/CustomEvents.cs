@@ -13,7 +13,8 @@ public static class ServerMesseges
     public static Action<string> OnJoinRoomFailed;
     public static Action OnLeaveRoom;
     public static Action<List<RoomInfo>> OnRoomListUpdated;
-    public static Action<Player, bool> OnRoomPlayersStatusChange;
+    public static Action<Player> OnPlayerJoinedRoom;
+    public static Action<Player> OnPlayerLeftRoom;
     public static Action<Player> OnPlayerPropertiesUpdate;
     public static Action<Player> OnPlayerStateUpdate;
     public static Action OnMasterClientSwitched;

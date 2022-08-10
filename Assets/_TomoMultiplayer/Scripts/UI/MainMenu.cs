@@ -27,6 +27,8 @@ public class MainMenu : MonoBehaviour
 
     private void Start()
     {
+        ResetAllStaticData();
+        
         MainMenu_Init();
         UpdateMainMenuData();
 
@@ -52,6 +54,15 @@ public class MainMenu : MonoBehaviour
     private void Update()
     {
         if (SessionData.inTimeout) playerTimeOutTimer.UpdateTimer();
+    }
+
+    private void ResetAllStaticData()
+    {
+        SessionData.cachedPlayersArenaNo.Clear();
+        SessionData.cachedRoomPlayers.Clear();
+        SessionData.localArenaNo = -1;
+
+        SessionData.ResetPlayersPerArena();
     }
 
     //Set username if it exists else popup username panel

@@ -15,7 +15,7 @@ public class FollowCam : MonoBehaviour
         photonView = GetComponent<PhotonView>();
 
         //Makes sure local camera renders for local player
-        if (photonView.IsMine) GetComponent<Camera>().depth = 10;
+        if (photonView.IsMine) GetComponent<Camera>().depth = 2;
     }
 
     void LateUpdate()

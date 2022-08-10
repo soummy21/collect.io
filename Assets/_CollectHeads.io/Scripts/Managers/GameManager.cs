@@ -3,6 +3,8 @@ using Photon.Pun;
 using Photon.Realtime;
 using System.IO;
 using System.Collections.Generic;
+using Random = System.Random;
+using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
@@ -11,7 +13,9 @@ public class GameManager : MonoBehaviour
     public Transform []teamASpawnPoint;
     public Transform []teamBSpawnPoint;
 
-    int[] currentTeamForArena = new int[4];
+    private int[] currentTeamForArena = new int[4];
+
+    //private List<Player> copyCachedPlayerList = new List<Player>();
 
     PhotonView photonView;
 
@@ -22,29 +26,36 @@ public class GameManager : MonoBehaviour
         photonView = GetComponent<PhotonView>();
     }
 
+
     private void Start()
     {
         if (SessionData.buildType != BuildType.Session_Moderator) return;
 
-        Player[] players = PhotonNetwork.PlayerListOthers;
+        ExitGames.Client.Photon.Hashtable playerProperties = SessionData.cachedRoomPlayers[0].CustomProperties;
+        if(playerProperties[Identifiers_Mul.PlayerSettings.TeamNo] == null) playerProperties.Add(Identifiers_Mul.PlayerSettings.TeamNo, -1);
 
-        for (int i = 0; i < players.Length; i++)
+        //Shuffle List using Linq
+        //for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
+        //{
+        //    copyCachedPlayerList.Add(SessionData.cachedRoomPlayers[i]);
+        //}
+
+        //var rnd = new Random();
+        //var randomized = copyCachedPlayerList.OrderBy(item => rnd.Next());
+        //List<Player> listRandomized = randomized.ToList();
+
+        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
         {
-            int playerArenaNo = (int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo];
-            //Sets the teamNo on the server
-            ExitGames.Client.Photon.Hashtable thisPlayerProperties = players[i].CustomProperties;
-            thisPlayerProperties.Add(Identifiers_Mul.PlayerSettings.TeamNo, currentTeamForArena[playerArenaNo - 1]);
-            players[i].SetCustomProperties(thisPlayerProperties);
+            int playerArenaNo = SessionData.cachedPlayersArenaNo[i];
 
-            photonView.RPC(nameof(SpawnPlayer), players[i], currentTeamForArena[playerArenaNo - 1]);
+            //Sets the teamNo on the server
+            playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = playerArenaNo;
+            playerProperties[Identifiers_Mul.PlayerSettings.TeamNo] = currentTeamForArena[playerArenaNo - 1];
+            SessionData.cachedRoomPlayers[i].SetCustomProperties(playerProperties);
+            //Debug.Log($"Player:{listRandomized[i].NickName}, Arena: {playerArenaNo}, Team:{currentTeamForArena[playerArenaNo - 1]}");
+            photonView.RPC(nameof(SpawnPlayer), SessionData.cachedRoomPlayers[i], currentTeamForArena[playerArenaNo - 1]);
             currentTeamForArena[playerArenaNo - 1] = 1 - currentTeamForArena[playerArenaNo - 1];
         }
-
-    }
-
-    [PunRPC]
-    private void SendArenaTeamsListToNetwork()
-    {
 
     }
 

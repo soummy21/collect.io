@@ -7,60 +7,66 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 using ExitGames.Client.Photon;
 using UnityEngine.SceneManagement;
 using System.Collections;
-using System.Collections.Generic;
 
 //Manages In-Room Lobby functionality (Both Visual and Backend)
 public class RoomLobbyManager : MonoBehaviour
 {
-    [Header("Common Room Lobby UI")]
+    [Header("Lobby UI")]
     [SerializeField] TextMeshProUGUI Text_CurrentRoomName;
 
-    [Header("Player Side Lobby UI")]
+    [Header("Lobby UI_Player")]
     [SerializeField] GameObject Panel_PlayerSideUI;
     [SerializeField] GameObject Popup_PlayerList;
 
-    [Header("Player Arena")]
+    [Header("Arena_Player")]
     [SerializeField] GameObject Button_Arena;
     [SerializeField] GameObject Popup_ArenaPlayers;
     [SerializeField] GameObject[] GO_ArenaPlayers;
     [SerializeField] TextMeshProUGUI Text_ArenaPlayersTitle;
 
-    [Header("Tutorial UI")]
+    [Header("Tutorial_Player")]
     [Tooltip("Time after which the tutorial automatically shifts")]
     [SerializeField] int transitionTime;
     [SerializeField] Image Image_Tutorial;
     [SerializeField] Sprite[] Sprites_Tutorial;
     [SerializeField] GameObject[] GO_TutorialPageNavig;
 
-    [Header("Moderator Side Lobby UI")]
+    [Header("Lobby UI_Moderator")]
     [SerializeField] GameObject Panel_ModeratorSideUI;
 
-    [Header("Game Settings")]
+    [Header("Game Settings_Moderator")]
     [SerializeField] GameObject Popup_GameSettings;
     [SerializeField] GameObject[] Tabs_GameSettings;
     [SerializeField] GameObject[] Panels_GameSettins;
     [SerializeField] Slider gameTimeSlider;
     [SerializeField] TextMeshProUGUI gameTimeText;
 
-    [Header("PlayerList")]
+    [Header("Player List_Moderator")]
     [SerializeField] TextMeshProUGUI Text_PlayerListTitle_Mod;
     [SerializeField] GameObject[] GO_Players_Mod;
     [SerializeField] GameObject NoPlayers;
+
+    [Header("Player List_Player")]
     [SerializeField] TextMeshProUGUI Text_PlayerListTitle_Player;
     [SerializeField] GameObject[] GO_Players;
 
-    [Header("ArenaPlayerList")]
+    [Header("ArenaList_Moderator")]
     [SerializeField] TextMeshProUGUI[] Text_ArenaPlayerTexts;
     [SerializeField] GameObject StartButton;
 
+    [Header("Manual Arena Selection_Moderator")]
+    [SerializeField] GameObject[] GO_PlayerSelectionButtons;
+    [SerializeField] GameObject[] GO_PlayersSelected;
+    [SerializeField] GameObject[] GO_PlayerTexts;
+    [SerializeField] GameObject[] GO_ArenaSelectionButtons;
+    
     private TimerUp tutorialTimer;
     private int currentTutorialPage = 0;
 
     private TextMeshProUGUI[] allPlayersText_Mod;
     private TextMeshProUGUI[] allPlayersText;
 
-    private List<Player> cachedRoomPlayers = new List<Player>();
-    private static int[] playersPerArena = new int[4];
+    
     private int currentSelectedPlayer = -1;
     private int noOfArenasInUse = 0;
 
@@ -89,7 +95,8 @@ public class RoomLobbyManager : MonoBehaviour
     {
         tutorialTimer.TimerCompleted += Tutorial_NextButton;
 
-        ServerMesseges.OnRoomPlayersStatusChange += UpdatePlayerListUI;
+        ServerMesseges.OnPlayerJoinedRoom += UpdatePlayerListUI;
+        ServerMesseges.OnPlayerLeftRoom += UpdatePlayerListUI;
         ServerMesseges.OnPlayerPropertiesUpdate += UpdatePlayerArenaUI;
         ServerMesseges.OnLeaveRoom += GoBackToMainMenu;
 
@@ -99,7 +106,8 @@ public class RoomLobbyManager : MonoBehaviour
     private void OnDisable()
     {
         tutorialTimer.TimerCompleted -= Tutorial_NextButton;
-        ServerMesseges.OnRoomPlayersStatusChange -= UpdatePlayerListUI;
+        ServerMesseges.OnPlayerJoinedRoom -= UpdatePlayerListUI;
+        ServerMesseges.OnPlayerLeftRoom -= UpdatePlayerListUI;
         ServerMesseges.OnPlayerPropertiesUpdate -= UpdatePlayerArenaUI;
         ServerMesseges.OnLeaveRoom -= GoBackToMainMenu;
 
@@ -110,24 +118,19 @@ public class RoomLobbyManager : MonoBehaviour
     private void NetworkingClient_EventReceived(EventData obj)
     {
         //Moderator closed room event
-        if (obj.Code == Identifiers_Mul.NetworkEvents.CloseRoomForEveryone) PlayerLeaveRoom(false);
+        if (obj.Code == Identifiers_Mul.NetworkEvents.CloseRoomForEveryone) PlayerLeaveRoom(false); //Closed Room -> kickPlayer = false
 
         //Kick out player event
         if (obj.Code == Identifiers_Mul.NetworkEvents.CloseRoomForPlayer)
         {
-            object[] data = (object[])obj.CustomData;
-
-            if ((string)data[0] == SessionData.playerName)
-            {
-                SessionData.inTimeout = true;
-                PlayerLeaveRoom(true);               
-            }
-
-            }
+            SessionData.inTimeout = true;
+            PlayerLeaveRoom(true); //Kick Player -> kickPlayer = true
+        }
     }
 
     private void LobbyMenu_Init()
     {
+
         //Player side initializations 
         Tutorial_Init();
 
@@ -176,16 +179,36 @@ public class RoomLobbyManager : MonoBehaviour
             GO_ArenaPlayers[i].SetActive(false);
         }
 
-        //Mod Arena
+        //Mod Arena UI
+
         StartButton.SetActive(true);
-        if (SessionData.buildType == BuildType.Session_Moderator) SessionData.arenaNo = 0;
+        RefreshManualArenaSelectionUI();
+
+        //Mod Arena
+
+        if (SessionData.buildType == BuildType.Session_Moderator) SessionData.localArenaNo = 0;
 
         //Initialize Hashtable with arenaNo
         playerProperties = new Hashtable();
-        playerProperties.Add(Identifiers_Mul.PlayerSettings.ArenaNo, SessionData.arenaNo);
+        playerProperties.Add(Identifiers_Mul.PlayerSettings.ArenaNo, SessionData.localArenaNo);
 
         //Update initialArenaNo on the server
         PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+
+        Panel_PlayerSideUI.SetActive(false);
+        Panel_ModeratorSideUI.SetActive(false);
+
+    }
+
+    private void RefreshManualArenaSelectionUI()
+    {
+        for (int i = 0; i < GO_PlayerTexts.Length; i++)
+        {
+            GO_PlayerSelectionButtons[i].SetActive(false);
+            GO_PlayerTexts[i].SetActive(true);
+            GO_PlayersSelected[i].SetActive(false);
+        }
+
 
     }
 
@@ -198,7 +221,7 @@ public class RoomLobbyManager : MonoBehaviour
 
         for (int i = 0; i < GO_Players_Mod.Length; i++)
         {
-            allPlayersText_Mod[i] = GO_Players_Mod[i].transform.GetChild(1).GetComponent<TextMeshProUGUI>();
+            allPlayersText_Mod[i] = GO_PlayerTexts[i].GetComponent<TextMeshProUGUI>();
             GO_Players_Mod[i].SetActive(false);
         }
 
@@ -219,7 +242,7 @@ public class RoomLobbyManager : MonoBehaviour
         OpenPanelBasedOnBuildType();
 
         //Update Player List UI based on joining lobby
-        UpdatePlayerListUI(null, false);
+        UpdatePlayerListUI(null);
 
     }
 
@@ -228,41 +251,39 @@ public class RoomLobbyManager : MonoBehaviour
     {
         switch (SessionData.buildType)
         {
-            case BuildType.Session_Moderator:
-                Text_PlayerListTitle_Mod.text = $"0 <#b3bedb>/</color> {PhotonNetwork.CurrentRoom.MaxPlayers - 1}";
-                requiredArenas = (int)PhotonNetwork.CurrentRoom.CustomProperties[Identifiers_Mul.PlayerSettings.NoOfArenas];
-                ResetArenaPlayerListUI();
+            case BuildType.Session_Moderator:               
+                ArenaRequirement_Init();
                 RefreshModeratorArenaList();
+                Text_PlayerListTitle_Mod.text = $"0 <#b3bedb>/</color> {PhotonNetwork.CurrentRoom.MaxPlayers - 1}";
                 Panel_ModeratorSideUI.SetActive(true);
                 break;
             case BuildType.Session_Player:
                 Panel_PlayerSideUI.SetActive(true);
                 tutorialTimer.StartTimer();
-                Invoke(nameof(LogWaitingForArena), 1.2f);
                 break;
             case BuildType.Global_Build:
                 break;
         }
     }
 
-    private void LogWaitingForArena() => PersistantUI.Instance.LogOnScreen("Waiting for moderator to assign you a arena");
+    private void ArenaRequirement_Init()
+    {
+        requiredArenas = (int)PhotonNetwork.CurrentRoom.CustomProperties[Identifiers_Mul.PlayerSettings.AvailableArenas];
+
+        for (int i = 0; i < GO_ArenaSelectionButtons.Length; i++)
+        {
+            GO_ArenaSelectionButtons[i].SetActive(i < requiredArenas);
+        }
+    }
 
     //Open Common Settings Menu on click
     public void SettingsButton() => PersistantUI.Instance.ShowSettingsPopup();
 
     //Update player list when player joins/leaves room
-    private void UpdatePlayerListUI(Player player, bool newPlayer)
+    private void UpdatePlayerListUI(Player player)
     {
-        //Update player list
 
-        if(player != null)
-        {
-            if (newPlayer) cachedRoomPlayers.Add(player);
-            else cachedRoomPlayers.Remove(player);
-
-        }
-
-        //Player Side
+        //Player Side Refresh
         if (SessionData.buildType == BuildType.Session_Player)
         {
             Player[] allPlayers = PhotonNetwork.PlayerList;
@@ -288,9 +309,12 @@ public class RoomLobbyManager : MonoBehaviour
         }
         
 
-        //Moderator Side
+        //Moderator Side Refresh
         if(SessionData.buildType == BuildType.Session_Moderator)
         {
+            RefreshModeratorArenaList();
+
+            //Player List Refresh
             Player[] otherPlayers = PhotonNetwork.PlayerListOthers;
 
             NoPlayers.SetActive(otherPlayers.Length == 0);
@@ -331,21 +355,22 @@ public class RoomLobbyManager : MonoBehaviour
             {
                 Button_Arena.SetActive(false);
                 Popup_ArenaPlayers.SetActive(false);
+                PersistantUI.Instance.LogOnScreen("Waiting for moderator to assign you a arena");
                 return;
             }
 
-            SessionData.arenaNo = (int)targetPlayer.CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo];
-            PersistantUI.Instance.LogOnScreen($"Joined Arena {SessionData.arenaNo}");
+            SessionData.localArenaNo = (int)targetPlayer.CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo];
+            PersistantUI.Instance.LogOnScreen($"Joined Arena {SessionData.localArenaNo}");
 
             Button_Arena.SetActive(true);
-            Button_Arena.GetComponentInChildren<TextMeshProUGUI>().text = "Arena " + SessionData.arenaNo;
-            Text_ArenaPlayersTitle.text = $"Arena {SessionData.arenaNo} <size=40><#6A6A6A> Total Players: 1";
+            Button_Arena.GetComponentInChildren<TextMeshProUGUI>().text = "Arena " + SessionData.localArenaNo;
+            Text_ArenaPlayersTitle.text = $"Arena {SessionData.localArenaNo} <size=40><#6A6A6A> Total Players: 1";
 
             GO_ArenaPlayers[0].SetActive(true);
             GO_ArenaPlayers[0].GetComponentInChildren<TextMeshProUGUI>().text = PhotonNetwork.LocalPlayer.NickName;
         }
 
-        if (SessionData.arenaNo == -1) return;
+        if (SessionData.localArenaNo == -1) return;
 
         Player[] otherPlayersInRoom = PhotonNetwork.PlayerListOthers;
 
@@ -358,7 +383,7 @@ public class RoomLobbyManager : MonoBehaviour
 
         for (int i = 0; i < otherPlayersInRoom.Length; i++)
         {               
-            if (SessionData.arenaNo == (int)otherPlayersInRoom[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo])
+            if (SessionData.localArenaNo == (int)otherPlayersInRoom[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo])
             {                
                 GO_ArenaPlayers[currentPlayersInArena].SetActive(true);
                 GO_ArenaPlayers[currentPlayersInArena].GetComponentInChildren<TextMeshProUGUI>().text = otherPlayersInRoom[i].NickName;
@@ -366,7 +391,7 @@ public class RoomLobbyManager : MonoBehaviour
             }
         }
 
-        Text_ArenaPlayersTitle.text = $"Arena {SessionData.arenaNo} <size=40><#6A6A6A> Total Players: {currentPlayersInArena}";
+        Text_ArenaPlayersTitle.text = $"Arena {SessionData.localArenaNo} <size=40><#6A6A6A> Total Players: {currentPlayersInArena}";
 
     }
 
@@ -417,10 +442,8 @@ public class RoomLobbyManager : MonoBehaviour
 
     private void ResetArenaList()
     {
-        for (int i = 0; i < playersPerArena.Length; i++)
-        {
-            playersPerArena[i] = 0;
-        }
+        currentSelectedPlayer = -1;
+
     }
 
     //Assign Arenas to all the players currently in room
@@ -442,16 +465,18 @@ public class RoomLobbyManager : MonoBehaviour
         }
         
         //Assign arenas to players
-        StartCoroutine(AssignPlayerAreans());
+        StartCoroutine(AssignRandomArenas());
 
     }
 
     //To ensure that no player assignment gets lost on the network
-    private IEnumerator AssignPlayerAreans()
+    private IEnumerator AssignRandomArenas()
     {
         onGoingAssignement = true;
 
         ResetArenaList();
+        RefreshManualArenaSelectionUI();
+        ResetArenaPlayerListUI();
 
         int[] remainingSpots = new int[requiredArenas]; //per arena spots for random assignment
         int arenaNoCount = 1;
@@ -464,23 +489,21 @@ public class RoomLobbyManager : MonoBehaviour
             if (arenaNoCount > requiredArenas) arenaNoCount = 1;
         }
 
-        Player[] otherPlayers = PhotonNetwork.PlayerListOthers;
-
-        ResetArenaPlayerListUI();
-
-        for (int i = 0; i < otherPlayers.Length; i++)
+        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
         {
-            int currentArenaNo = GiveRandomArenaNo(remainingSpots);
+            int currentArenaNo = SessionData.GiveRandomArenaNo(remainingSpots,requiredArenas);
             //Set Arena for player
             playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = currentArenaNo;
-            otherPlayers[i].SetCustomProperties(playerProperties);
-            playersPerArena[currentArenaNo - 1]++;
+            SessionData.cachedRoomPlayers[i].SetCustomProperties(playerProperties);
+            SessionData.cachedPlayersArenaNo[i] = currentArenaNo;
+            SessionData.playersPerArena[currentArenaNo - 1]++;
 
             //Set Moderator side UI for assigned Player
             if (Text_ArenaPlayerTexts[currentArenaNo - 1].text == "No Assigned Players") Text_ArenaPlayerTexts[currentArenaNo - 1].text = "";
 
             Text_ArenaPlayerTexts[currentArenaNo - 1].text +=
-                string.IsNullOrEmpty(Text_ArenaPlayerTexts[currentArenaNo - 1].text) ? otherPlayers[i].NickName : $", {otherPlayers[i].NickName}";
+                string.IsNullOrEmpty(Text_ArenaPlayerTexts[currentArenaNo - 1].text) ? 
+                SessionData.cachedRoomPlayers[i].NickName : $", {SessionData.cachedRoomPlayers[i].NickName}";
 
 
             //0.03 gives us a range of 0.03 to 0.48 seconds to complete assignment of arenas
@@ -493,14 +516,32 @@ public class RoomLobbyManager : MonoBehaviour
         onGoingAssignement = false;
     }
 
+    public void FlipPlayerOptions(int playerNo)
+    {
+        GO_PlayerTexts[playerNo - 1].SetActive(!GO_PlayerTexts[playerNo - 1].activeSelf);
+        GO_PlayerSelectionButtons[playerNo - 1].SetActive(!GO_PlayerSelectionButtons[playerNo - 1].activeSelf);
+    }
+
     public void SelectPlayerToAssign(int selectedPlayer)
     {
-        if((int) cachedRoomPlayers[selectedPlayer].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] > 1)
+        if( SessionData.cachedPlayersArenaNo[selectedPlayer - 1] >= 1)
         {
             PersistantUI.Instance.LogOnScreen("Player already has an arena, deselect it first to assign!");
             return;
         }
+
+        if(currentSelectedPlayer == selectedPlayer)
+        {
+            GO_PlayersSelected[currentSelectedPlayer - 1].SetActive(false);
+            currentSelectedPlayer = - 1;
+            return;
+        }
+
+        if(currentSelectedPlayer != -1) GO_PlayersSelected[currentSelectedPlayer - 1].SetActive(false);
+
         currentSelectedPlayer = selectedPlayer;
+        PersistantUI.Instance.LogOnScreen($"Player: {SessionData.cachedRoomPlayers[currentSelectedPlayer - 1].NickName} selected!");
+        GO_PlayersSelected[currentSelectedPlayer - 1].SetActive(true);
     }
 
     public void AssignArenaToPlayer(int arenaNo)
@@ -511,66 +552,54 @@ public class RoomLobbyManager : MonoBehaviour
             return;
         }
 
-        if (arenaNo > requiredArenas)
-        {
-            PersistantUI.Instance.LogOnScreen("Arena Not active!");
-            return;
-        }
-
         //Assignment of arena
-        Hashtable changedArena = cachedRoomPlayers[currentSelectedPlayer - 1].CustomProperties;
-        playersPerArena[(int)changedArena[Identifiers_Mul.PlayerSettings.ArenaNo] - 1]++;
-        changedArena[Identifiers_Mul.PlayerSettings.ArenaNo] = arenaNo;
-        cachedRoomPlayers[currentSelectedPlayer - 1].SetCustomProperties(changedArena);
+        SessionData.playersPerArena[arenaNo - 1]++;
+        playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = arenaNo;
+        SessionData.cachedRoomPlayers[currentSelectedPlayer - 1].SetCustomProperties(playerProperties);
+        SessionData.cachedPlayersArenaNo[currentSelectedPlayer - 1] = arenaNo;
 
         RefreshModeratorArenaList();
-
+        PersistantUI.Instance.LogOnScreen($"Player: {SessionData.cachedRoomPlayers[currentSelectedPlayer - 1].NickName} is assigned Arena {arenaNo}");
+        GO_PlayersSelected[currentSelectedPlayer - 1].SetActive(false);
         currentSelectedPlayer = -1;
 
     }
 
     public void DeassignArenaForPlayer(int selectedPlayer)
     {
-        if((int)cachedRoomPlayers[selectedPlayer].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] < 1)
+        int playerArenaNo = SessionData.cachedPlayersArenaNo[selectedPlayer - 1];
+        if (playerArenaNo < 1)
         {
             PersistantUI.Instance.LogOnScreen("Player hasn't been assigned a arena yet");
             return;
         }
 
         //Deassign arena for player
-        Hashtable changedArena = cachedRoomPlayers[selectedPlayer - 1].CustomProperties;
-        playersPerArena[(int)changedArena[Identifiers_Mul.PlayerSettings.ArenaNo] - 1]--;
-        changedArena[Identifiers_Mul.PlayerSettings.ArenaNo] = -1;
-        cachedRoomPlayers[selectedPlayer - 1].SetCustomProperties(changedArena);
+        SessionData.playersPerArena[playerArenaNo - 1]--;
+        playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = -1;
+        SessionData.cachedRoomPlayers[selectedPlayer - 1].SetCustomProperties(playerProperties);
+        SessionData.cachedPlayersArenaNo[selectedPlayer - 1] = -1;
+        PersistantUI.Instance.LogOnScreen($"Deassigned Arena for Player: {SessionData.cachedRoomPlayers[selectedPlayer - 1].NickName}");
 
         //Refresh UI
         RefreshModeratorArenaList();
     }
 
-    //Gives a valid random arena
-    private int GiveRandomArenaNo(int [] remainingSpots)
-    {
-        int randArenaNo = Random.Range(1, requiredArenas + 1);
-        if(remainingSpots[randArenaNo - 1] == 0)
-        {
-            return GiveRandomArenaNo(remainingSpots);
-        }
-        remainingSpots[randArenaNo - 1]--;
-        return randArenaNo;
-    }
-
     public void StartGame()
     {
-        Player[] otherPlayers = PhotonNetwork.PlayerListOthers;
         string errorMessage = "Assign arena to: ";
         bool allAssignedArenas = true;
+        noOfArenasInUse = 0;
 
-        for (int i = 0; i < otherPlayers.Length; i++)
+        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
         {
-            if((int)otherPlayers[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] == -1)
+            int playerArenaNo = SessionData.cachedPlayersArenaNo[i];
+
+            if (playerArenaNo < 1)
             {
                 allAssignedArenas = false;
-                errorMessage += errorMessage == "Assign arena to: " ?  $"{otherPlayers[i].NickName} " : $",{otherPlayers[i].NickName} ";
+                errorMessage += errorMessage == "Assign arena to: " ?  $"{SessionData.cachedRoomPlayers[i].NickName} " 
+                    : $",{SessionData.cachedRoomPlayers[i].NickName} ";
             }
         }
 
@@ -580,11 +609,42 @@ public class RoomLobbyManager : MonoBehaviour
             return;
         }
 
+        if(SessionData.playersPerArena[0] < 2)
+        {
+            PersistantUI.Instance.LogOnScreen($"Can't start game as Arena 1 doesn't meet minimum players");
+            return;
+        }
 
         for (int i = 0; i < requiredArenas; i++)
         {
+            if (SessionData.playersPerArena[i] == 1)
+            {
+                PersistantUI.Instance.LogOnScreen($"Can't start game as Arena {i + 1} doesn't meet minimum players");
+                return;
+            }
+
+            if (SessionData.playersPerArena[i] >= 2) noOfArenasInUse++;
+
+            if(i >= 1)
+            {
+                if (SessionData.playersPerArena[i] >= 2 && SessionData.playersPerArena[i - 1] == 0)
+                {
+                    PersistantUI.Instance.LogOnScreen($"Can't start game as Arena {i + 1} is filled but Arena{i} isn't");
+                    return;
+                }
+            }
+
 
         }
+
+        //Change occupied arenas 
+        if(noOfArenasInUse != (int)PhotonNetwork.CurrentRoom.CustomProperties[Identifiers_Mul.PlayerSettings.OccupiedArenas])
+        {
+            Hashtable changedOccupiedArenas = PhotonNetwork.CurrentRoom.CustomProperties;
+            changedOccupiedArenas[Identifiers_Mul.PlayerSettings.OccupiedArenas] = noOfArenasInUse;
+            PhotonNetwork.CurrentRoom.SetCustomProperties(changedOccupiedArenas);
+        }
+
 
         PersistantUI.Instance.LogOnScreen("Starting Game");
         PhotonNetwork.LoadLevel(Identifiers_Mul.GameScene);
@@ -592,37 +652,60 @@ public class RoomLobbyManager : MonoBehaviour
 
     public void Moderator_CloseRoom()
     {
+        //Reset arenaNos on the network
+        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
+        {
+            playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = -1;
+            SessionData.cachedRoomPlayers[i].SetCustomProperties(playerProperties);
+        }
+
         PersistantUI.Instance.LogOnScreen("Closing Room: " + PhotonNetwork.CurrentRoom.Name);
         if (PhotonNetwork.CurrentRoom.PlayerCount > 1)
         {
             PhotonNetwork.RaiseEvent(Identifiers_Mul.NetworkEvents.CloseRoomForEveryone, new object[] { }, RaiseEventOptions.Default, SendOptions.SendReliable);
         }
+
+        Invoke(nameof(ModeratorLeaveRoom), 0.5f);
+    }
+
+    private void ModeratorLeaveRoom()
+    {
         PhotonNetwork.LeaveRoom(false);
     }
 
     public void KickPlayer(int playerListNo)
     {
-        string playerName = allPlayersText_Mod[playerListNo].text;
-        object[] data = new object[] { playerName };
+        currentSelectedPlayer = -1;
+        if(SessionData.cachedPlayersArenaNo[playerListNo - 1] >= 1) SessionData.playersPerArena[SessionData.cachedPlayersArenaNo[playerListNo - 1]]--;
+        RefreshManualArenaSelectionUI();
 
-        PhotonNetwork.RaiseEvent(Identifiers_Mul.NetworkEvents.CloseRoomForPlayer,data, RaiseEventOptions.Default, SendOptions.SendReliable);
+        //Reset player arena No
+        playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = -1;
+        SessionData.cachedRoomPlayers[playerListNo - 1].SetCustomProperties(playerProperties);
+
+        RaiseEventOptions raiseEventOptions = new RaiseEventOptions();
+        raiseEventOptions.TargetActors = new int[1] { SessionData.cachedRoomPlayers[playerListNo - 1].ActorNumber };
+        object[] obj = new object[] { };
+
+        PhotonNetwork.RaiseEvent(Identifiers_Mul.NetworkEvents.CloseRoomForPlayer, obj, raiseEventOptions, SendOptions.SendReliable);
         
     }
 
     //Update the UI for a moderator when they rejoin the room lobby
     public void RefreshModeratorArenaList()
     {
-        Player[] players = PhotonNetwork.PlayerListOthers;
+        ResetArenaPlayerListUI();
 
-        for (int i = 0; i < players.Length; i++)
+        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
         {
-            int playerArenaNo = (int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo];
+            int playerArenaNo = SessionData.cachedPlayersArenaNo[i];
             if (playerArenaNo <= 0) continue;
             //Set Moderator side UI for assigned Player
             if (Text_ArenaPlayerTexts[playerArenaNo - 1].text == "No Assigned Players") Text_ArenaPlayerTexts[playerArenaNo - 1].text = "";
 
             Text_ArenaPlayerTexts[playerArenaNo - 1].text +=
-                string.IsNullOrEmpty(Text_ArenaPlayerTexts[playerArenaNo - 1].text) ? players[i].NickName : $", {players[i].NickName}";
+                string.IsNullOrEmpty(Text_ArenaPlayerTexts[playerArenaNo - 1].text) ? 
+                SessionData.cachedRoomPlayers[i].NickName : $", {SessionData.cachedRoomPlayers[i].NickName}";
         }
     }
 
@@ -674,11 +757,7 @@ public class RoomLobbyManager : MonoBehaviour
     //On Leave Room go back to main menu
     private void GoBackToMainMenu()
     {
-        playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = -1;
-        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
-        SessionData.arenaNo = -1;
         SceneManager.LoadScene(Identifiers_Mul.MainMenuScene);
-
     }
 
 }

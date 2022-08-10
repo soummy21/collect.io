@@ -50,7 +50,7 @@ public class GameMenuManager : MonoBehaviour
     {
         int teamNo = (int)team;
 
-        object[] data = new object[] { teamNo, SessionData.arenaNo };
+        object[] data = new object[] { teamNo, SessionData.localArenaNo };
         photonView.RPC(nameof(UpdateScore), RpcTarget.All, data);
     }
 
@@ -72,11 +72,15 @@ public class GameMenuManager : MonoBehaviour
         teamAScores[arenaNo - 1].text = "Team A\n" + perArena_TeamA_Scores[arenaNo -1].ToString();
         teamBScores[arenaNo - 1].text = "Team B\n" + perArena_TeamB_Scores[arenaNo - 1].ToString();
 
-        if (perArena_TeamA_Scores[arenaNo - 1] == 15 || perArena_TeamB_Scores[arenaNo - 1] == 15)
+        if (perArena_TeamA_Scores[arenaNo - 1] == 1 || perArena_TeamB_Scores[arenaNo - 1] == 1)
         {
             UserMessages.UpdateLeaderBoard?.Invoke(arenaNo, team);
 
-            if (SessionData.arenaNo == arenaNo) GameMessages.OnGameSessionEnded?.Invoke();
+            if (SessionData.localArenaNo == arenaNo)
+            {
+                GameMessages.OnGameSessionEnded?.Invoke();
+                ArenaManager.Instance.PlayerBecomesSpectator();
+            }
 
             if (SessionData.buildType == BuildType.Session_Moderator) GameMessages.OnCompleteArena?.Invoke(arenaNo);
 

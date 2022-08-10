@@ -49,9 +49,9 @@ public class PlayerManager : MonoBehaviour
         switch (myTeam)
         {
             case Teams.A:
-                return roomManager.teamASpawnPoint[SessionData.arenaNo - 1].position + Vector3.up * Random.Range(-6, 6);
+                return roomManager.teamASpawnPoint[SessionData.localArenaNo - 1].position + Vector3.up * Random.Range(-6, 6);
             case Teams.B:
-                return roomManager.teamBSpawnPoint[SessionData.arenaNo - 1].position + Vector3.up * Random.Range(-6, 6);
+                return roomManager.teamBSpawnPoint[SessionData.localArenaNo - 1].position + Vector3.up * Random.Range(-6, 6);
             default: return Vector3.zero;
         }
 

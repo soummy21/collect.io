@@ -5,8 +5,6 @@ public static class Identifiers_Mul
     public static readonly string MainMenuScene = "MainMenu";
     public static readonly string LobbyScene = "Lobby";
     public static readonly string GameScene = "Game";
-
-    public static readonly string PerArenaPlayers = "PerArenaPlayers";
     
     public static class PlayerSettings
     {
@@ -15,7 +13,8 @@ public static class Identifiers_Mul
         public static readonly string GameTime = "GameTime";
         public static readonly string ArenaNo = "ArenaNo";
         public static readonly string TeamNo = "TeamNo";
-        public static readonly string NoOfArenas = "NoOfArenas";
+        public static readonly string AvailableArenas = "NoOfArenas";
+        public static readonly string OccupiedArenas = "OccupiedArenas";
         public static readonly string ArenaPosition = "ArenaPosition";
 
     }
