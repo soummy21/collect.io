@@ -3,8 +3,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using System.IO;
 using System.Collections.Generic;
-using Random = System.Random;
-using System.Linq;
+
 
 public class GameManager : MonoBehaviour
 {
@@ -14,8 +13,6 @@ public class GameManager : MonoBehaviour
     public Transform []teamBSpawnPoint;
 
     private int[] currentTeamForArena = new int[4];
-
-    //private List<Player> copyCachedPlayerList = new List<Player>();
 
     PhotonView photonView;
 
@@ -34,28 +31,21 @@ public class GameManager : MonoBehaviour
         ExitGames.Client.Photon.Hashtable playerProperties = SessionData.cachedRoomPlayers[0].CustomProperties;
         if(playerProperties[Identifiers_Mul.PlayerSettings.TeamNo] == null) playerProperties.Add(Identifiers_Mul.PlayerSettings.TeamNo, -1);
 
-        //Shuffle List using Linq
-        //for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
-        //{
-        //    copyCachedPlayerList.Add(SessionData.cachedRoomPlayers[i]);
-        //}
+        List<Player> scrambledPlayerList = SessionData.GetScrambledList(SessionData.cachedRoomPlayers);
 
-        //var rnd = new Random();
-        //var randomized = copyCachedPlayerList.OrderBy(item => rnd.Next());
-        //List<Player> listRandomized = randomized.ToList();
-
-        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
+        for (int i = 0; i < scrambledPlayerList.Count; i++)
         {
-            int playerArenaNo = SessionData.cachedPlayersArenaNo[i];
-
+            int playerArenaNo = SessionData.cachedPlayersArenaNo[SessionData.cachedRoomPlayers.IndexOf(scrambledPlayerList[i])];
             //Sets the teamNo on the server
             playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = playerArenaNo;
             playerProperties[Identifiers_Mul.PlayerSettings.TeamNo] = currentTeamForArena[playerArenaNo - 1];
-            SessionData.cachedRoomPlayers[i].SetCustomProperties(playerProperties);
-            //Debug.Log($"Player:{listRandomized[i].NickName}, Arena: {playerArenaNo}, Team:{currentTeamForArena[playerArenaNo - 1]}");
-            photonView.RPC(nameof(SpawnPlayer), SessionData.cachedRoomPlayers[i], currentTeamForArena[playerArenaNo - 1]);
+            scrambledPlayerList[i].SetCustomProperties(playerProperties);
+            Debug.Log($"Player:{scrambledPlayerList[i].NickName}, Arena: {playerArenaNo}, Team:{currentTeamForArena[playerArenaNo - 1]}");
+            photonView.RPC(nameof(SpawnPlayer), scrambledPlayerList[i], currentTeamForArena[playerArenaNo - 1]);
             currentTeamForArena[playerArenaNo - 1] = 1 - currentTeamForArena[playerArenaNo - 1];
         }
+
+        PersistantUI.Instance.LogOnScreen("Game Loaded!");
 
     }
 

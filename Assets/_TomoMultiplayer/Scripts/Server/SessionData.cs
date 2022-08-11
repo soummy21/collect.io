@@ -1,6 +1,8 @@
 using Photon.Realtime;
 using UnityEngine;
 using System.Collections.Generic;
+using Random = System.Random;
+using System.Linq;
 
 public static class SessionData
 {
@@ -65,17 +67,21 @@ public static class SessionData
         }
     }
 
-    //Gives a valid random arena
-    public static int GiveRandomArenaNo(int[] remainingSpots, int requiredArenas)
+    //Shuffle List using Linq
+    public static List<Player> GetScrambledList(List<Player> listToScramble)
     {
-        int randArenaNo = Random.Range(1, requiredArenas + 1);
-        if (remainingSpots[randArenaNo - 1] == 0)
-        {
-            return GiveRandomArenaNo(remainingSpots, requiredArenas);
-        }
-        remainingSpots[randArenaNo - 1]--;
-        return randArenaNo;
-    }
+        List<Player> tempList = new List<Player>();
 
+        //Copy data to the temp list
+        for (int i = 0; i < cachedRoomPlayers.Count; i++)
+        {
+            tempList.Add(cachedRoomPlayers[i]);
+        }
+
+        var rnd = new Random();
+        var randomized = tempList.OrderBy(item => rnd.Next()); //Randomize and return a linq
+
+        return randomized.ToList();
+    }
 
 }

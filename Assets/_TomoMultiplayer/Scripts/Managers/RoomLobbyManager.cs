@@ -7,6 +7,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 using ExitGames.Client.Photon;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using System.Collections.Generic;
 
 //Manages In-Room Lobby functionality (Both Visual and Backend)
 public class RoomLobbyManager : MonoBehaviour
@@ -360,7 +361,6 @@ public class RoomLobbyManager : MonoBehaviour
             }
 
             SessionData.localArenaNo = (int)targetPlayer.CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo];
-            PersistantUI.Instance.LogOnScreen($"Joined Arena {SessionData.localArenaNo}");
 
             Button_Arena.SetActive(true);
             Button_Arena.GetComponentInChildren<TextMeshProUGUI>().text = "Arena " + SessionData.localArenaNo;
@@ -440,12 +440,6 @@ public class RoomLobbyManager : MonoBehaviour
         }
     }
 
-    private void ResetArenaList()
-    {
-        currentSelectedPlayer = -1;
-
-    }
-
     //Assign Arenas to all the players currently in room
     public void AssignArenasToPlayersInLobby()
     {
@@ -474,28 +468,20 @@ public class RoomLobbyManager : MonoBehaviour
     {
         onGoingAssignement = true;
 
-        ResetArenaList();
+        currentSelectedPlayer = -1;
         RefreshManualArenaSelectionUI();
         ResetArenaPlayerListUI();
+        SessionData.ResetPlayersPerArena();
 
-        int[] remainingSpots = new int[requiredArenas]; //per arena spots for random assignment
-        int arenaNoCount = 1;
-        //Fairly devide the no of players in each arena
-        for (int i = 0; i < PhotonNetwork.CurrentRoom.MaxPlayers - 1; i++)
+        List<Player> scrambledPlayerList = SessionData.GetScrambledList(SessionData.cachedRoomPlayers);
+
+        int currentArenaNo = 1;
+        for (int i = 0; i < scrambledPlayerList.Count; i++)
         {
-            remainingSpots[arenaNoCount - 1]++;
-
-            arenaNoCount++;
-            if (arenaNoCount > requiredArenas) arenaNoCount = 1;
-        }
-
-        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
-        {
-            int currentArenaNo = SessionData.GiveRandomArenaNo(remainingSpots,requiredArenas);
             //Set Arena for player
             playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = currentArenaNo;
-            SessionData.cachedRoomPlayers[i].SetCustomProperties(playerProperties);
-            SessionData.cachedPlayersArenaNo[i] = currentArenaNo;
+            scrambledPlayerList[i].SetCustomProperties(playerProperties);           
+            SessionData.cachedPlayersArenaNo[SessionData.cachedRoomPlayers.IndexOf(scrambledPlayerList[i])] = currentArenaNo;
             SessionData.playersPerArena[currentArenaNo - 1]++;
 
             //Set Moderator side UI for assigned Player
@@ -503,8 +489,10 @@ public class RoomLobbyManager : MonoBehaviour
 
             Text_ArenaPlayerTexts[currentArenaNo - 1].text +=
                 string.IsNullOrEmpty(Text_ArenaPlayerTexts[currentArenaNo - 1].text) ? 
-                SessionData.cachedRoomPlayers[i].NickName : $", {SessionData.cachedRoomPlayers[i].NickName}";
+                scrambledPlayerList[i].NickName : $", {scrambledPlayerList[i].NickName}";
 
+            //Sequential increment of currentArenaNo
+            currentArenaNo = currentArenaNo + 1 > requiredArenas ? 1 : currentArenaNo + 1;
 
             //0.03 gives us a range of 0.03 to 0.48 seconds to complete assignment of arenas
             yield return new WaitForSeconds(0.03f);
@@ -512,7 +500,6 @@ public class RoomLobbyManager : MonoBehaviour
         }
 
         PersistantUI.Instance.LogOnScreen("Assigned random arenas to players!");
-
         onGoingAssignement = false;
     }
 
@@ -676,7 +663,7 @@ public class RoomLobbyManager : MonoBehaviour
     public void KickPlayer(int playerListNo)
     {
         currentSelectedPlayer = -1;
-        if(SessionData.cachedPlayersArenaNo[playerListNo - 1] >= 1) SessionData.playersPerArena[SessionData.cachedPlayersArenaNo[playerListNo - 1]]--;
+        if(SessionData.cachedPlayersArenaNo[playerListNo - 1] >= 1) SessionData.playersPerArena[SessionData.cachedPlayersArenaNo[playerListNo - 1] - 1]--;
         RefreshManualArenaSelectionUI();
 
         //Reset player arena No

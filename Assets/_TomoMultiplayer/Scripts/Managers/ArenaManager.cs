@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
+using System.Collections.Generic;
 
 public class ArenaManager : MonoBehaviour
 {
@@ -236,7 +237,7 @@ public class ArenaManager : MonoBehaviour
         Cameras_Arena[currentSelectedArena- 1].depth = 3;
         moderatorCameraFollows[currentSelectedArena - 1].UpdateCameraFollow(true);
         Panels_Arena[currentSelectedArena - 1].SetActive(true);
-        Text_SpectatingArenaNo.text = $"Spectating: Arena {currentSelectedArena}";
+        Text_SpectatingArenaNo.text = $"Arena {currentSelectedArena}";
     }
 
     public void NextArena()
@@ -389,6 +390,7 @@ public class ArenaManager : MonoBehaviour
 
     public void ReloadLevel()
     {
+        PersistantUI.Instance.LogOnScreen("Reloading Game...");
         PhotonNetwork.LoadLevel(3);
     }
 
@@ -400,6 +402,7 @@ public class ArenaManager : MonoBehaviour
             return;
         }
 
+        PersistantUI.Instance.LogOnScreen("Randomizing Arenas");
         canAssignRandomTeams = false;
         StartCoroutine(RandomizeArenas());
 
@@ -407,32 +410,38 @@ public class ArenaManager : MonoBehaviour
 
     private IEnumerator RandomizeArenas()
     {
-        int[] remainingSpots = new int[currentlyOccupiedArenas];
-
-        for (int i = 0; i < remainingSpots.Length; i++)
-        {
-            remainingSpots[i] = SessionData.playersPerArena[i];
-        }
-
         SessionData.ResetPlayersPerArena();
+
         ExitGames.Client.Photon.Hashtable playerProperties = SessionData.cachedRoomPlayers[0].CustomProperties;
+        int currentArenaNo = 1;
 
-        for (int i = 0; i < SessionData.cachedRoomPlayers.Count; i++)
-        {
-            int currentArenaNo = SessionData.GiveRandomArenaNo(remainingSpots, currentlyOccupiedArenas);
+        List<Player> scrambledPlayerList = SessionData.GetScrambledList(SessionData.cachedRoomPlayers);
 
+        for (int i = 0; i < scrambledPlayerList.Count; i++)
+        {            
+            Debug.Log($"{scrambledPlayerList[i].NickName}, arena: {currentArenaNo}");
             //Set Arena for player         
             playerProperties[Identifiers_Mul.PlayerSettings.ArenaNo] = currentArenaNo;
-            SessionData.cachedRoomPlayers[i].SetCustomProperties(playerProperties);
-            SessionData.cachedPlayersArenaNo[i] = currentArenaNo;
+            scrambledPlayerList[i].SetCustomProperties(playerProperties);
+            SessionData.cachedPlayersArenaNo[SessionData.cachedRoomPlayers.IndexOf(scrambledPlayerList[i])] = currentArenaNo;
             SessionData.playersPerArena[currentArenaNo - 1]++;
+            photonView.RPC(nameof(ChangeLocalArenaNo), scrambledPlayerList[i], currentArenaNo);
+
+            currentArenaNo = currentArenaNo + 1 > currentlyOccupiedArenas ? 1 : currentArenaNo + 1;
             yield return new WaitForSeconds(0.03f);
 
         }
 
         canAssignRandomTeams = true;
-        yield return new WaitForSeconds(1.5f);
+        PersistantUI.Instance.LogOnScreen("Random Arenas Generated!");
+        yield return new WaitForSeconds(0.5f);
         ReloadLevel();
+    }
+
+    [PunRPC]
+    private void ChangeLocalArenaNo(int arenaNo)
+    {
+        SessionData.localArenaNo = arenaNo;
     }
 
     public void CloseRoom()
@@ -532,7 +541,7 @@ public class ArenaManager : MonoBehaviour
         {
             if ((int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] == 0) continue;
 
-            Debug.Log($"Player:{players[i].NickName}, Arena: {(int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo]},Team:{ (int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.TeamNo]}");
+           // Debug.Log($"Player:{players[i].NickName}, Arena: {(int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo]},Team:{ (int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.TeamNo]}");
 
 
             if ((int)players[i].CustomProperties[Identifiers_Mul.PlayerSettings.ArenaNo] == arenaNo 

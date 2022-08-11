@@ -1420,7 +1420,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8741223944000778081, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}
       propertyPath: playerTimeout
-      value: 300
+      value: 15
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b7f6f76d1c9d1244d9e75892849fe6cc, type: 3}

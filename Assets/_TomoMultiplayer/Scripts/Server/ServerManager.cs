@@ -172,6 +172,7 @@ namespace TomoClub.Multiplayer
         public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
         {
             ServerMesseges.OnPlayerPropertiesUpdate?.Invoke(targetPlayer);
+            if (targetPlayer == PhotonNetwork.LocalPlayer) PersistantUI.Instance.LogOnScreen($"Joined Arena {SessionData.localArenaNo}");
         }
 
         public override void OnMasterClientSwitched(Player newMasterClient)

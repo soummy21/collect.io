@@ -72,7 +72,7 @@ public class GameMenuManager : MonoBehaviour
         teamAScores[arenaNo - 1].text = "Team A\n" + perArena_TeamA_Scores[arenaNo -1].ToString();
         teamBScores[arenaNo - 1].text = "Team B\n" + perArena_TeamB_Scores[arenaNo - 1].ToString();
 
-        if (perArena_TeamA_Scores[arenaNo - 1] == 1 || perArena_TeamB_Scores[arenaNo - 1] == 1)
+        if (perArena_TeamA_Scores[arenaNo - 1] == 15 || perArena_TeamB_Scores[arenaNo - 1] == 15)
         {
             UserMessages.UpdateLeaderBoard?.Invoke(arenaNo, team);
 
